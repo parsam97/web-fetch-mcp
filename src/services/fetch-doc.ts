@@ -13,9 +13,11 @@ export interface DocFetchResult {
 
 // Hosts that require a stealth headless browser because they block
 // standard fetchers (Jina, curl, etc.) with bot detection / CAPTCHAs.
-const STEALTH_HOSTS = new Set([
-  "help.salesforce.com",
-]);
+// Configured via the STEALTH_HOSTS env var (comma-separated hostnames).
+const STEALTH_HOSTS = new Set(
+  process.env.STEALTH_HOSTS?.split(",").map(h => h.trim().toLowerCase()).filter(Boolean) ?? []
+);
+debug(`stealth hosts: ${STEALTH_HOSTS.size ? [...STEALTH_HOSTS].join(", ") : "(none)"}`);
 
 // Concurrency limiters — Puppeteer tabs are ~200MB each, Jina is lightweight HTTP
 const stealthSemaphore = new Semaphore(2);

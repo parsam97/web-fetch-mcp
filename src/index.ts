@@ -17,7 +17,9 @@ server.registerTool(
     title: "Fetch Web Page",
     description: `Fetch a web page and return its content as clean text.
 
-Uses Jina Reader for most sites. Falls back to a headless browser with stealth mode for sites with aggressive bot detection (configurable via the stealth_hosts list).
+Uses Jina Reader for most sites. Hostnames listed in the STEALTH_HOSTS env var are fetched via a headless browser with stealth mode to bypass bot detection.
+
+If a fetch fails due to suspected bot detection, always relay the STEALTH_HOSTS configuration suggestion to the user so they can update their MCP server config.
 
 Args:
   - url (string): Full URL of the page to fetch
@@ -87,6 +89,8 @@ server.registerTool(
 Same as fetch_page but accepts an array of URLs (up to 10). Fetches run in parallel with automatic concurrency limiting to prevent memory issues.
 
 Each URL can have its own pagination parameters. Results are returned in order, one per URL. Partial failures are reported per-URL — a single failed URL does not block the others.
+
+If any fetch fails due to suspected bot detection, always relay the STEALTH_HOSTS configuration suggestion to the user so they can update their MCP server config.
 
 Args:
   - urls: Array of objects, each with:
