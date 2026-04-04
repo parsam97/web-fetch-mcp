@@ -3,6 +3,7 @@ import StealthPlugin from "puppeteer-extra-plugin-stealth";
 import type { Browser } from "puppeteer";
 import { withRetry } from "./retry.js";
 import { htmlToMarkdown, htmlToMarkdownFallback } from "./html-to-markdown.js";
+import { debug } from "./debug.js";
 
 (puppeteer as any).use(StealthPlugin());
 
@@ -31,6 +32,7 @@ async function getBrowser(): Promise<Browser> {
 export async function fetchViaPuppeteer(url: string): Promise<PuppeteerResult> {
   return withRetry(
     async () => {
+      debug(`puppeteer: launching page for ${url}`);
       const browser = await getBrowser();
       const page = await browser.newPage();
 
@@ -73,7 +75,9 @@ export async function fetchViaPuppeteer(url: string): Promise<PuppeteerResult> {
           return document.documentElement.outerHTML;
         });
 
+        debug(`puppeteer: extracted ${rawHtml.length} chars of HTML`);
         let content = htmlToMarkdown(rawHtml) ?? htmlToMarkdownFallback(rawHtml);
+        debug(`puppeteer: converted to ${content.length} chars of markdown`);
 
         let truncated = false;
         if (content.length > CHARACTER_LIMIT) {

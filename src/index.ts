@@ -78,6 +78,89 @@ Returns:
   }
 );
 
+server.registerTool(
+  "fetch_pages",
+  {
+    title: "Fetch Multiple Web Pages",
+    description: `Fetch multiple web pages concurrently and return their content.
+
+Same as fetch_page but accepts an array of URLs (up to 10). Fetches run in parallel with automatic concurrency limiting to prevent memory issues.
+
+Each URL can have its own pagination parameters. Results are returned in order, one per URL. Partial failures are reported per-URL — a single failed URL does not block the others.
+
+Args:
+  - urls: Array of objects, each with:
+    - url (string): Full URL of the page to fetch
+    - start_index (number): Character offset (default: 0)
+    - max_length (number): Max characters to return (default: ${DEFAULT_MAX_LENGTH})`,
+    inputSchema: {
+      urls: z
+        .array(
+          z.object({
+            url: z
+              .string()
+              .url("Must be a valid URL")
+              .describe("Full URL of the web page to fetch"),
+            start_index: z
+              .number()
+              .int()
+              .min(0)
+              .default(0)
+              .describe("Character offset to start from."),
+            max_length: z
+              .number()
+              .int()
+              .min(1)
+              .max(1_000_000)
+              .default(DEFAULT_MAX_LENGTH)
+              .describe("Maximum characters to return."),
+          })
+        )
+        .min(1)
+        .max(10)
+        .describe("Array of URLs to fetch with optional pagination parameters."),
+    },
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: true,
+    },
+  },
+  async ({ urls }) => {
+    const results = await Promise.allSettled(
+      urls.map(({ url, start_index, max_length }) =>
+        fetchDocPage(url).then(({ content }) => ({
+          url,
+          ...paginateContent(content, start_index, max_length),
+        }))
+      )
+    );
+
+    const contentItems = results.map((result, i) => {
+      const url = urls[i].url;
+      const label = `--- [${i + 1}/${urls.length}] ${url} ---`;
+
+      if (result.status === "fulfilled") {
+        return { type: "text" as const, text: `${label}\n${result.value.text}` };
+      }
+
+      const errMsg =
+        result.reason instanceof Error
+          ? result.reason.message
+          : String(result.reason);
+      return { type: "text" as const, text: `${label}\nError: ${errMsg}` };
+    });
+
+    const allFailed = results.every((r) => r.status === "rejected");
+
+    return {
+      ...(allFailed ? { isError: true } : {}),
+      content: contentItems,
+    };
+  }
+);
+
 // --- Start server ---
 
 async function main() {

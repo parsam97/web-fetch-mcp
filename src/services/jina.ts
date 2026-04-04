@@ -1,4 +1,5 @@
 import { withRetry } from "./retry.js";
+import { debug } from "./debug.js";
 
 const JINA_BASE_URL = "https://r.jina.ai/";
 const CHARACTER_LIMIT = 50000;
@@ -27,6 +28,7 @@ function isRetryable(err: unknown): boolean {
 export async function fetchViaJina(url: string): Promise<JinaResult> {
   return withRetry(
     async () => {
+      debug(`jina: fetching ${url}`);
       const jinaUrl = `${JINA_BASE_URL}${url}`;
 
       const controller = new AbortController();
@@ -47,6 +49,7 @@ export async function fetchViaJina(url: string): Promise<JinaResult> {
           );
         }
 
+        debug(`jina: got HTTP ${response.status} for ${url}`);
         let content = await response.text();
         let truncated = false;
 
