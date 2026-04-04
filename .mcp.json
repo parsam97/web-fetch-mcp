@@ -1,8 +1,0 @@
-{
-  "mcpServers": {
-    "web-fetch": {
-      "command": "node",
-      "args": ["dist/index.js"]
-    }
-  }
-}
