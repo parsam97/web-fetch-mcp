@@ -53,10 +53,61 @@ async function testJinaPath() {
   console.log(`\n  Preview (first 500 chars):\n${result.content.slice(0, 500)}`);
 }
 
+async function testFetchPagesParallel() {
+  console.log("\n--- fetch_pages: parallel fetch of 2 URLs ---");
+  const urls = [
+    "https://developer.salesforce.com/docs/platform/named-credentials/guide/get-started.html",
+    "https://developer.salesforce.com/docs/atlas.en-us.apexcode.meta/apexcode/apex_callouts_named_credentials.htm",
+  ];
+
+  const start = Date.now();
+  const results = await Promise.all(urls.map((u) => fetchDocPage(u)));
+  const elapsed = Date.now() - start;
+
+  for (let i = 0; i < results.length; i++) {
+    assert(results[i].content.length > 200, `URL ${i + 1}: content length ${results[i].content.length} > 200`);
+    assert(/^#+\s/m.test(results[i].content), `URL ${i + 1}: contains markdown heading`);
+  }
+  console.log(`  Fetched ${urls.length} URLs in ${elapsed}ms`);
+}
+
+async function testFetchPagesSequentialCache() {
+  console.log("\n--- fetch_pages: sequential calls share cache ---");
+
+  // First call — should fetch fresh (or hit cache from previous test)
+  const url = "https://developer.salesforce.com/docs/platform/named-credentials/guide/get-started.html";
+  const first = await fetchDocPage(url);
+
+  // Second call — must be a cache hit with identical content
+  const start = Date.now();
+  const second = await fetchDocPage(url);
+  const elapsed = Date.now() - start;
+
+  assert(second.content === first.content, "cached content is identical");
+  assert(elapsed < 50, `cache hit took ${elapsed}ms (expected < 50ms)`);
+}
+
+async function testCrossToolCacheSharing() {
+  console.log("\n--- cache sharing: fetch_page then fetch_pages hit same cache ---");
+
+  // This URL was fetched by testJinaPath or testFetchPagesParallel above
+  const url = "https://developer.salesforce.com/docs/platform/named-credentials/guide/get-started.html";
+
+  const start = Date.now();
+  const result = await fetchDocPage(url);
+  const elapsed = Date.now() - start;
+
+  assert(result.content.length > 200, `content length ${result.content.length} > 200`);
+  assert(elapsed < 50, `cross-tool cache hit took ${elapsed}ms (expected < 50ms)`);
+}
+
 async function main() {
   try {
     await testPuppeteerPath();
     await testJinaPath();
+    await testFetchPagesParallel();
+    await testFetchPagesSequentialCache();
+    await testCrossToolCacheSharing();
   } finally {
     await closeBrowser();
   }
