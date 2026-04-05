@@ -9,7 +9,35 @@ MCP server that fetches web pages as clean, LLM-ready markdown. Uses [Jina Reade
 | `fetch_page` | Fetch a single URL with pagination support |
 | `fetch_pages` | Fetch up to 10 URLs concurrently |
 
+## Prerequisites
+
+- **Docker** — for the Docker install method (recommended, no other dependencies needed)
+- **Node.js** (v18+) — for local installation
+- **System libraries for Chromium** — only needed for local install if you want to use puppeteer and `STEALTH_HOSTS`.
+
 ## Setup
+
+### Option 1: Docker
+
+Add to your MCP client config:
+
+```json
+{
+  "mcpServers": {
+    "web-fetch": {
+      "command": "docker",
+      "args": [
+        "run", "-i", "--rm",
+        "-e", "STEALTH_HOSTS=example.com",
+        "-e", "DEBUG=1",
+        "parsam97/web-fetch-mcp"
+      ]
+    }
+  }
+}
+```
+
+### Option 2: Clone and build
 
 ```bash
 git clone https://github.com/parsam97/web-fetch-mcp.git
@@ -26,10 +54,8 @@ Then add to your MCP client config:
     "web-fetch": {
       "command": "node",
       "args": ["/path/to/web-fetch-mcp/dist/index.js"],
-
-      // optional
       "env": {
-        "STEALTH_HOSTS": "help.salesforce.com,example.com",
+        "STEALTH_HOSTS": "example.com",
         "DEBUG": "1"
       }
     }
