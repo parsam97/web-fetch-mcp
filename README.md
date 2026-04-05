@@ -57,19 +57,48 @@ Then add to your MCP client config:
 
 When a fetch fails due to bot detection, the error message will suggest adding the hostname to `STEALTH_HOSTS`.
 
-Make sure you instruct your agent to relay this information to you, so you can know to add this to your env variable in the mcpServer config. For example:
+Make sure you instruct your agent to relay this information to you. If you are configuring a subagent to use this mcp server, instruct **both** the subagent and your main agent (e.g. in `CLAUDE.md`) to relay this information back to you.
 
-```plaintext
-## Bot detection errors
+Example subagent instructions:
 
-If a fetch fails with a message mentioning `STEALTH_HOSTS`, you **must** relay this to the user immediately. Tell them:
+````plaintext
+- **CRITICAL — Bot detection errors:** If ANY fetch returns an error mentioning
+  `STEALTH_HOSTS`, you must **start your entire response** with a clearly
+  separated, prominent block like this:
 
-1. Which hostname was blocked (it's in the error message)
-2. They need to add that hostname to the `STEALTH_HOSTS` environment variable in their MCP server config
-3. The format is comma-separated hostnames, e.g. `"STEALTH_HOSTS": "help.salesforce.com,other.example.com"`
-4. They need to restart the MCP server after changing the config
+  ```
+  ⚠️ ACTION REQUIRED: MCP Server Configuration Change Needed
 
-Do not silently skip the failed URL or try to work around it. The user needs to know so they can fix their config permanently.
+  [hostname] blocked the fetch due to bot detection.
+
+  To fix this permanently:
+  1. Open your MCP server config
+  2. Add "STEALTH_HOSTS": "[hostname]" to the "env" section of the web-fetch server
+  3. Restart the MCP server
+
+  Until this is fixed, documentation from [hostname] cannot be fetched.
+  ```
+
+  This block MUST appear at the very top of your response — before any
+  documentation content. Do NOT bury it at the end, in a footnote, or as a
+  "Note" section. The parent agent summarizes your response and will drop
+  anything that looks like a minor aside. Making it the first thing ensures
+  it gets relayed to the user.
+
+  Do NOT silently skip the failed URL, retry it, or try workarounds.
+````
+
+Example agent instructions:
+
+```
+# User-level instructions
+
+## MCP STEALTH_HOSTS warnings
+
+When any subagent response mentions `STEALTH_HOSTS` or bot detection blocking a fetch,
+you MUST relay this to the user. This is a configuration issue that only the user can fix.
+Include the blocked hostname and tell them to add it to `STEALTH_HOSTS` in their MCP server
+config. Do not drop or summarize away this information.
 ```
 
 ## Development
