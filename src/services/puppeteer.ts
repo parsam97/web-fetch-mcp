@@ -16,18 +16,37 @@ export interface PuppeteerResult {
   truncated: boolean;
 }
 
-async function launchBrowser(): Promise<Browser> {
-  return (puppeteer as any).launch({
-    headless: true,
-    args: ["--no-sandbox", "--disable-setuid-sandbox"],
-  });
+let browserInstance: Browser | null = null;
+let browserPromise: Promise<Browser> | null = null;
+
+async function getBrowser(): Promise<Browser> {
+  if (browserInstance && browserInstance.connected) return browserInstance;
+  if (!browserPromise) {
+    browserPromise = (puppeteer as any)
+      .launch({
+        headless: true,
+        args: ["--no-sandbox", "--disable-setuid-sandbox"],
+      })
+      .then((b: Browser) => {
+        browserInstance = b;
+        browserPromise = null;
+        return b;
+      });
+  }
+  return browserPromise!;
+}
+
+export async function closeBrowser(): Promise<void> {
+  const b = browserInstance;
+  browserInstance = null;
+  if (b) await b.close().catch(() => {});
 }
 
 export async function fetchViaPuppeteer(url: string): Promise<PuppeteerResult> {
   return withRetry(
     async () => {
       debug(`puppeteer: launching page for ${url}`);
-      const browser = await launchBrowser();
+      const browser = await getBrowser();
       const page = await browser.newPage();
 
       try {
@@ -80,7 +99,6 @@ export async function fetchViaPuppeteer(url: string): Promise<PuppeteerResult> {
         return { content, truncated };
       } finally {
         await page.close().catch(() => {});
-        await browser.close().catch(() => {});
       }
     },
     { maxAttempts: 3 }

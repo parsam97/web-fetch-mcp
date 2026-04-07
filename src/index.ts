@@ -5,6 +5,29 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { z } from "zod";
 import { fetchDocPage } from "./services/fetch-doc.js";
 import { paginateContent, DEFAULT_MAX_LENGTH } from "./services/paginate.js";
+import { closeBrowser } from "./services/puppeteer.js";
+
+// Graceful shutdown: when the parent disconnects (stdin EOF) or we get a
+// signal, wait for any in-flight requests to finish, then close the browser
+// and exit. This prevents leaked Chromium processes in Docker/WSL2.
+let inFlight = 0;
+let draining = false;
+
+async function maybeShutdown() {
+  if (!draining || inFlight > 0) return;
+  await closeBrowser();
+  process.exit(0);
+}
+
+async function track<T>(fn: () => Promise<T>): Promise<T> {
+  inFlight++;
+  try {
+    return await fn();
+  } finally {
+    inFlight--;
+    void maybeShutdown();
+  }
+}
 
 const server = new McpServer({
   name: "web-fetch-mcp",
@@ -58,7 +81,7 @@ Returns:
       openWorldHint: true,
     },
   },
-  async ({ url, start_index, max_length }) => {
+  async ({ url, start_index, max_length }) => track(async () => {
     try {
       const { content } = await fetchDocPage(url);
       const { text } = paginateContent(content, start_index, max_length);
@@ -77,7 +100,7 @@ Returns:
         ],
       };
     }
-  }
+  })
 );
 
 server.registerTool(
@@ -131,7 +154,7 @@ Args:
       openWorldHint: true,
     },
   },
-  async ({ urls }) => {
+  async ({ urls }) => track(async () => {
     const results = await Promise.allSettled(
       urls.map(({ url, start_index, max_length }) =>
         fetchDocPage(url).then(({ content }) => ({
@@ -162,13 +185,23 @@ Args:
       ...(allFailed ? { isError: true } : {}),
       content: contentItems,
     };
-  }
+  })
 );
 
 // --- Start server ---
 
 async function main() {
   const transport = new StdioServerTransport();
+
+  const beginDrain = () => {
+    draining = true;
+    void maybeShutdown();
+  };
+  process.stdin.on("end", beginDrain);
+  process.stdin.on("close", beginDrain);
+  process.on("SIGINT", beginDrain);
+  process.on("SIGTERM", beginDrain);
+
   await server.connect(transport);
   console.error("web-fetch-mcp server running via stdio");
 }
