@@ -1,4 +1,4 @@
-export const DEFAULT_MAX_LENGTH = 5_000;
+export const DEFAULT_MAX_LENGTH = 25_000;
 
 export interface PaginateResult {
   text: string;

@@ -1,10 +1,5 @@
-import { describe, it, expect, afterAll } from "vitest";
+import { describe, it, expect } from "vitest";
 import { fetchDocPage } from "./fetch-doc.js";
-import { closeBrowser } from "./puppeteer.js";
-
-afterAll(async () => {
-  await closeBrowser();
-});
 
 describe("fetchDocPage", () => {
   describe("stealth-hosted sites (Puppeteer)", () => {

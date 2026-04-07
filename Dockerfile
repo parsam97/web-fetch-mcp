@@ -45,21 +45,20 @@ WORKDIR /app
 COPY --from=build /app/node_modules ./node_modules
 
 # Puppeteer's Chromium binary (downloaded during npm ci)
-COPY --from=build /root/.cache/puppeteer /root/.cache/puppeteer
+COPY --from=build /root/.cache/puppeteer /app/.cache/puppeteer
 
 # Compiled output + package.json (needed for ESM resolution)
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/package.json ./
 
-# Run as non-root user — symlink Chromium cache instead of copying (saves ~650MB)
+# Run as non-root user
 RUN groupadd -r mcpuser && useradd -r -g mcpuser -d /home/mcpuser -m mcpuser \
-    && chown -R mcpuser:mcpuser /app \
-    && mkdir -p /home/mcpuser/.cache \
-    && ln -s /root/.cache/puppeteer /home/mcpuser/.cache/puppeteer
+    && chown -R mcpuser:mcpuser /app
 
 USER mcpuser
 
 ENV NODE_ENV=production
+ENV PUPPETEER_CACHE_DIR=/app/.cache/puppeteer
 
 LABEL org.opencontainers.image.title="web-fetch-mcp"
 LABEL org.opencontainers.image.description="MCP server that fetches web pages as clean, LLM-ready markdown"

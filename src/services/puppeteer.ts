@@ -16,24 +16,18 @@ export interface PuppeteerResult {
   truncated: boolean;
 }
 
-let browserInstance: Browser | null = null;
-
-async function getBrowser(): Promise<Browser> {
-  if (browserInstance && browserInstance.connected) {
-    return browserInstance;
-  }
-  browserInstance = await (puppeteer as any).launch({
+async function launchBrowser(): Promise<Browser> {
+  return (puppeteer as any).launch({
     headless: true,
     args: ["--no-sandbox", "--disable-setuid-sandbox"],
   });
-  return browserInstance!;
 }
 
 export async function fetchViaPuppeteer(url: string): Promise<PuppeteerResult> {
   return withRetry(
     async () => {
       debug(`puppeteer: launching page for ${url}`);
-      const browser = await getBrowser();
+      const browser = await launchBrowser();
       const page = await browser.newPage();
 
       try {
@@ -63,14 +57,12 @@ export async function fetchViaPuppeteer(url: string): Promise<PuppeteerResult> {
           )
           .catch(() => {});
 
-        // Extract a focused HTML fragment from the page to avoid OOM
-        // when parsing multi-MB Aura/SPA pages with linkedom.
+        // Strip script/style/noscript in-page to keep Readability fast and
+        // avoid OOM on multi-MB Aura/SPA pages, then hand the whole document
+        // to Readability so it can find the article on its own.
         const rawHtml = await page.evaluate(() => {
-          for (const sel of [".siteforceContentArea", "article", "main", "[role='main']"]) {
-            const el = document.querySelector(sel);
-            if (el && el.textContent && el.textContent.trim().length > 200) {
-              return `<html><body>${el.outerHTML}</body></html>`;
-            }
+          for (const el of document.querySelectorAll("script, style, noscript")) {
+            el.remove();
           }
           return document.documentElement.outerHTML;
         });
@@ -87,16 +79,10 @@ export async function fetchViaPuppeteer(url: string): Promise<PuppeteerResult> {
 
         return { content, truncated };
       } finally {
-        await page.close();
+        await page.close().catch(() => {});
+        await browser.close().catch(() => {});
       }
     },
     { maxAttempts: 3 }
   );
-}
-
-export async function closeBrowser(): Promise<void> {
-  if (browserInstance) {
-    await browserInstance.close();
-    browserInstance = null;
-  }
 }
