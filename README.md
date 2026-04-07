@@ -30,7 +30,7 @@ Add to your MCP client config:
         "run", "-i", "--rm",
         "-e", "STEALTH_HOSTS=example.com",
         "-e", "DEBUG=1",
-        "parsam97/web-fetch-mcp"
+        "parsam123/web-fetch-mcp"
       ]
     }
   }
