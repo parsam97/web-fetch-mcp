@@ -4,11 +4,21 @@ import * as cache from "./cache.js";
 import { normalizeUrl } from "./url-normalizer.js";
 import { isAllowedByRobots } from "./robots.js";
 import { Semaphore } from "./semaphore.js";
+import { findHandler } from "./plugins.js";
 import { debug } from "./debug.js";
 
 export interface DocFetchResult {
   content: string;
-  truncated: boolean;
+}
+
+const MAX_CONTENT_CHARS = 10_000_000;
+
+function capContent(content: string): string {
+  if (content.length <= MAX_CONTENT_CHARS) return content;
+  const notice =
+    `⚠️ This page was very large (${content.length} characters) and has been ` +
+    `truncated to the first ${MAX_CONTENT_CHARS}.\n\n`;
+  return notice + content.slice(0, MAX_CONTENT_CHARS);
 }
 
 // Hosts that require a stealth headless browser because they block
@@ -47,16 +57,27 @@ export async function fetchDocPage(url: string): Promise<DocFetchResult> {
     );
   }
 
+  const handler = findHandler(url);
+  if (handler) {
+    debug(`fetching via plugin ${handler.name}: ${url}`);
+    const { content } = await jinaSemaphore.run(() => handler.fetch(url));
+    const result: DocFetchResult = { content: capContent(content) };
+    debug(`fetched ${result.content.length} chars via plugin ${handler.name}: ${url}`);
+    cache.set(cacheKey, result);
+    return result;
+  }
+
   const stealth = needsStealth(url);
   const path = stealth ? "puppeteer" : "jina";
   debug(`fetching via ${path}: ${url}`);
 
   const semaphore = stealth ? stealthSemaphore : jinaSemaphore;
-  const result = await semaphore.run(() =>
+  const { content } = await semaphore.run(() =>
     stealth ? fetchViaPuppeteer(url) : fetchViaJina(url)
   );
 
-  debug(`fetched ${result.content.length} chars (truncated=${result.truncated}): ${url}`);
+  const result: DocFetchResult = { content: capContent(content) };
+  debug(`fetched ${result.content.length} chars: ${url}`);
   cache.set(cacheKey, result);
   return result;
 }

@@ -27,7 +27,6 @@ async function testPuppeteerPath() {
   );
 
   assert(typeof result.content === "string", "content is a string");
-  assert(typeof result.truncated === "boolean", "truncated is a boolean");
   assert(result.content.length > 500, `content length ${result.content.length} > 500`);
   assert(/^#+\s/m.test(result.content), "contains markdown heading");
   assert(!result.content.includes("<script"), "no <script> tags");
@@ -44,7 +43,6 @@ async function testJinaPath() {
   );
 
   assert(typeof result.content === "string", "content is a string");
-  assert(typeof result.truncated === "boolean", "truncated is a boolean");
   assert(result.content.length > 500, `content length ${result.content.length} > 500`);
   assert(/^#+\s/m.test(result.content), "contains markdown heading");
   assert(!result.content.includes("<script"), "no <script> tags");

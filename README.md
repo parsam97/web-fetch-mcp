@@ -79,6 +79,7 @@ Then add to your MCP client config:
 | Variable | Description |
 |----------|-------------|
 | `STEALTH_HOSTS` | Comma-separated hostnames that need a stealth headless browser |
+| `FETCH_PLUGINS` | Comma-separated module specifiers (absolute paths or installed package names) loaded as custom fetch strategies — see [Plugins](#plugins) |
 | `DEBUG` | Set to `1` to enable debug logging to stderr |
 
 When a fetch fails due to bot detection, the error message will suggest adding the hostname to `STEALTH_HOSTS`.
@@ -126,6 +127,41 @@ you MUST relay this to the user. This is a configuration issue that only the use
 Include the blocked hostname and tell them to add it to `STEALTH_HOSTS` in their MCP server
 config. Do not drop or summarize away this information.
 ```
+
+## Plugins
+
+The fetcher is host-agnostic. When a specific URL family can't be fetched generically (e.g. content served only through a private JSON API), that knowledge belongs in a **plugin**, not in this codebase.
+
+A plugin is a separate, self-contained module that exports a list of fetch-strategy handlers:
+
+```ts
+export const handlers = [
+  {
+    name: "my-handler",
+    matches(url) {
+      return /* true if this handler claims the URL */;
+    },
+    async fetch(url) {
+      return { content: "...markdown..." };
+    },
+  },
+];
+```
+
+Point `FETCH_PLUGINS` at one or more modules (comma-separated absolute paths or installed package names):
+
+```jsonc
+"env": { "FETCH_PLUGINS": "/plugins/my-plugin.js" }
+```
+
+Behavior:
+
+- For each fetch, the first handler whose `matches(url)` returns true handles it; otherwise the generic Jina/stealth path runs. A handler takes precedence over `STEALTH_HOSTS`.
+- The core still owns caching, robots.txt, the size cap, and pagination — a plugin only supplies content.
+- If a handler's `fetch` throws, the error propagates (no silent fall-through to the generic path).
+- A plugin that fails to load or has no `handlers` export is logged to stderr and skipped; the server still runs.
+
+Running via Docker? The module must exist inside the container — mount it (`-v /host/plugins:/plugins -e FETCH_PLUGINS=/plugins/my-plugin.js`).
 
 ## Development
 

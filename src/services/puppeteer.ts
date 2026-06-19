@@ -7,13 +7,11 @@ import { debug } from "./debug.js";
 
 (puppeteer as any).use(StealthPlugin());
 
-const CHARACTER_LIMIT = 50_000;
 const NAV_TIMEOUT_MS = 30_000;
 const CONTENT_WAIT_MS = 10_000;
 
 export interface PuppeteerResult {
   content: string;
-  truncated: boolean;
 }
 
 let browserInstance: Browser | null = null;
@@ -87,16 +85,10 @@ export async function fetchViaPuppeteer(url: string): Promise<PuppeteerResult> {
         });
 
         debug(`puppeteer: extracted ${rawHtml.length} chars of HTML`);
-        let content = htmlToMarkdown(rawHtml) ?? htmlToMarkdownFallback(rawHtml);
+        const content = htmlToMarkdown(rawHtml) ?? htmlToMarkdownFallback(rawHtml);
         debug(`puppeteer: converted to ${content.length} chars of markdown`);
 
-        let truncated = false;
-        if (content.length > CHARACTER_LIMIT) {
-          content = content.slice(0, CHARACTER_LIMIT);
-          truncated = true;
-        }
-
-        return { content, truncated };
+        return { content };
       } finally {
         await page.close().catch(() => {});
       }

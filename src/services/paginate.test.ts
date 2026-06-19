@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { paginateContent } from "./paginate.js";
+import { paginateContent, DEFAULT_MAX_LENGTH } from "./paginate.js";
 
 const LONG_CONTENT = "a".repeat(10_000);
 
@@ -51,10 +51,10 @@ describe("paginateContent", () => {
     expect(result.text).toContain("10000 total");
   });
 
-  it("uses default max_length of 5000", () => {
-    const content = "b".repeat(6000);
+  it("uses DEFAULT_MAX_LENGTH when max_length is omitted", () => {
+    const content = "b".repeat(DEFAULT_MAX_LENGTH + 1000);
     const result = paginateContent(content, 0);
     expect(result.hasMore).toBe(true);
-    expect(result.text).toContain("start_index=5000");
+    expect(result.text).toContain(`start_index=${DEFAULT_MAX_LENGTH}`);
   });
 });

@@ -15,8 +15,8 @@ describe("cache", () => {
   });
 
   it("stores and retrieves a value", () => {
-    cache.set("key1", { content: "hello", truncated: false });
-    expect(cache.get("key1")).toEqual({ content: "hello", truncated: false });
+    cache.set("key1", { content: "hello" });
+    expect(cache.get("key1")).toEqual({ content: "hello" });
   });
 
   it("expires entries after TTL (30 minutes)", () => {

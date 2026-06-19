@@ -20,7 +20,6 @@ describe("fetchViaJina", () => {
 
     const result = await fetchViaJina("https://example.com/page");
     expect(result.content).toBe("# Hello");
-    expect(result.truncated).toBe(false);
   });
 
   it("on 403, suggests adding hostname to STEALTH_HOSTS", async () => {

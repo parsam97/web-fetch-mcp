@@ -2,12 +2,10 @@ import { withRetry } from "./retry.js";
 import { debug } from "./debug.js";
 
 const JINA_BASE_URL = "https://r.jina.ai/";
-const CHARACTER_LIMIT = 50000;
 const FETCH_TIMEOUT_MS = 30000;
 
 export interface JinaResult {
   content: string;
-  truncated: boolean;
 }
 
 function warnStealthHost(hostname: string, reason: string): void {
@@ -64,8 +62,7 @@ export async function fetchViaJina(url: string): Promise<JinaResult> {
         }
 
         debug(`jina: got HTTP ${response.status} for ${url}`);
-        let content = await response.text();
-        let truncated = false;
+        const content = await response.text();
 
         // Jina returns 200 but embeds warnings when the page didn't render properly
         if (
@@ -82,12 +79,7 @@ export async function fetchViaJina(url: string): Promise<JinaResult> {
           );
         }
 
-        if (content.length > CHARACTER_LIMIT) {
-          content = content.slice(0, CHARACTER_LIMIT);
-          truncated = true;
-        }
-
-        return { content, truncated };
+        return { content };
       } finally {
         clearTimeout(timeout);
       }

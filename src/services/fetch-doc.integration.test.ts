@@ -9,9 +9,7 @@ describe("fetchDocPage", () => {
       );
 
       expect(result).toHaveProperty("content");
-      expect(result).toHaveProperty("truncated");
       expect(typeof result.content).toBe("string");
-      expect(typeof result.truncated).toBe("boolean");
       expect(result.content.length).toBeGreaterThan(500);
 
       // Structural markdown checks — validates the extraction pipeline
@@ -29,7 +27,6 @@ describe("fetchDocPage", () => {
       );
 
       expect(result).toHaveProperty("content");
-      expect(result).toHaveProperty("truncated");
       expect(result.content.length).toBeGreaterThan(500);
 
       // Jina returns markdown — same structural checks

@@ -6,6 +6,7 @@ import { z } from "zod";
 import { fetchDocPage } from "./services/fetch-doc.js";
 import { paginateContent, DEFAULT_MAX_LENGTH } from "./services/paginate.js";
 import { closeBrowser } from "./services/puppeteer.js";
+import { loadPlugins } from "./services/plugins.js";
 
 // Graceful shutdown: when the parent disconnects (stdin EOF) or we get a
 // signal, wait for any in-flight requests to finish, then close the browser
@@ -68,7 +69,6 @@ Returns:
         .number()
         .int()
         .min(1)
-        .max(1_000_000)
         .default(DEFAULT_MAX_LENGTH)
         .describe(
           "Maximum characters to return. Increase for more content per call, decrease to save context."
@@ -138,7 +138,6 @@ Args:
               .number()
               .int()
               .min(1)
-              .max(1_000_000)
               .default(DEFAULT_MAX_LENGTH)
               .describe("Maximum characters to return."),
           })
@@ -191,6 +190,8 @@ Args:
 // --- Start server ---
 
 async function main() {
+  await loadPlugins();
+
   const transport = new StdioServerTransport();
 
   const beginDrain = () => {
