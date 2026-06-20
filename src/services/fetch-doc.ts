@@ -9,6 +9,8 @@ import { debug } from "./debug.js";
 
 export interface DocFetchResult {
   content: string;
+  strategy: string;
+  extraction?: "readability" | "full-dom";
 }
 
 const MAX_CONTENT_CHARS = 10_000_000;
@@ -61,7 +63,10 @@ export async function fetchDocPage(url: string): Promise<DocFetchResult> {
   if (handler) {
     debug(`fetching via plugin ${handler.name}: ${url}`);
     const { content } = await jinaSemaphore.run(() => handler.fetch(url));
-    const result: DocFetchResult = { content: capContent(content) };
+    const result: DocFetchResult = {
+      content: capContent(content),
+      strategy: `plugin:${handler.name}`,
+    };
     debug(`fetched ${result.content.length} chars via plugin ${handler.name}: ${url}`);
     cache.set(cacheKey, result);
     return result;
@@ -71,12 +76,18 @@ export async function fetchDocPage(url: string): Promise<DocFetchResult> {
   const path = stealth ? "puppeteer" : "jina";
   debug(`fetching via ${path}: ${url}`);
 
-  const semaphore = stealth ? stealthSemaphore : jinaSemaphore;
-  const { content } = await semaphore.run(() =>
-    stealth ? fetchViaPuppeteer(url) : fetchViaJina(url)
-  );
-
-  const result: DocFetchResult = { content: capContent(content) };
+  const result: DocFetchResult = stealth
+    ? await stealthSemaphore.run(() => fetchViaPuppeteer(url)).then(
+        ({ content, extraction }) => ({
+          content: capContent(content),
+          strategy: "puppeteer+stealth",
+          extraction,
+        })
+      )
+    : await jinaSemaphore.run(() => fetchViaJina(url)).then(({ content }) => ({
+        content: capContent(content),
+        strategy: "jina",
+      }));
   debug(`fetched ${result.content.length} chars: ${url}`);
   cache.set(cacheKey, result);
   return result;

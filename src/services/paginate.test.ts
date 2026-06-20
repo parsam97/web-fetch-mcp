@@ -57,4 +57,44 @@ describe("paginateContent", () => {
     expect(result.hasMore).toBe(true);
     expect(result.text).toContain(`start_index=${DEFAULT_MAX_LENGTH}`);
   });
+
+  it("prepends a fetch-metadata header when meta is provided", () => {
+    const result = paginateContent(LONG_CONTENT, 0, 100, {
+      strategy: "puppeteer+stealth",
+      extraction: "full-dom",
+    });
+    expect(result.text.startsWith("[fetch: puppeteer+stealth")).toBe(true);
+    expect(result.text).toContain("full-DOM fallback (Readability under-extracted)");
+    expect(result.text).toContain("10000 chars total");
+    expect(result.text).toContain("showing 0–100");
+  });
+
+  it("adds a raw-DOM note only for paginated full-dom extraction", () => {
+    const note = "raw page DOM";
+    expect(
+      paginateContent(LONG_CONTENT, 0, 100, {
+        strategy: "puppeteer+stealth",
+        extraction: "full-dom",
+      }).text
+    ).toContain(note);
+    expect(
+      paginateContent(LONG_CONTENT, 0, 100, {
+        strategy: "puppeteer+stealth",
+        extraction: "readability",
+      }).text
+    ).not.toContain(note);
+    expect(
+      paginateContent("short", 0, 5000, {
+        strategy: "puppeteer+stealth",
+        extraction: "full-dom",
+      }).text
+    ).not.toContain(note);
+  });
+
+  it("omits extraction and window for a single-page jina fetch", () => {
+    const result = paginateContent("short text", 0, 5000, { strategy: "jina" });
+    expect(result.text).toContain("[fetch: jina · 10 chars total]");
+    expect(result.text).not.toContain("extraction:");
+    expect(result.text).not.toContain("showing");
+  });
 });

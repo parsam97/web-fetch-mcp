@@ -83,8 +83,11 @@ Returns:
   },
   async ({ url, start_index, max_length }) => track(async () => {
     try {
-      const { content } = await fetchDocPage(url);
-      const { text } = paginateContent(content, start_index, max_length);
+      const { content, strategy, extraction } = await fetchDocPage(url);
+      const { text } = paginateContent(content, start_index, max_length, {
+        strategy,
+        extraction,
+      });
 
       return {
         content: [{ type: "text" as const, text }],
@@ -156,9 +159,12 @@ Args:
   async ({ urls }) => track(async () => {
     const results = await Promise.allSettled(
       urls.map(({ url, start_index, max_length }) =>
-        fetchDocPage(url).then(({ content }) => ({
+        fetchDocPage(url).then(({ content, strategy, extraction }) => ({
           url,
-          ...paginateContent(content, start_index, max_length),
+          ...paginateContent(content, start_index, max_length, {
+            strategy,
+            extraction,
+          }),
         }))
       )
     );

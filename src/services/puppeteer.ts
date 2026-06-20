@@ -12,6 +12,7 @@ const CONTENT_WAIT_MS = 10_000;
 
 export interface PuppeteerResult {
   content: string;
+  extraction: "readability" | "full-dom";
 }
 
 let browserInstance: Browser | null = null;
@@ -85,10 +86,12 @@ export async function fetchViaPuppeteer(url: string): Promise<PuppeteerResult> {
         });
 
         debug(`puppeteer: extracted ${rawHtml.length} chars of HTML`);
-        const content = htmlToMarkdown(rawHtml) ?? htmlToMarkdownFallback(rawHtml);
-        debug(`puppeteer: converted to ${content.length} chars of markdown`);
+        const readable = htmlToMarkdown(rawHtml);
+        const content = readable ?? htmlToMarkdownFallback(rawHtml);
+        const extraction = readable ? "readability" : "full-dom";
+        debug(`puppeteer: converted to ${content.length} chars of markdown (${extraction})`);
 
-        return { content };
+        return { content, extraction };
       } finally {
         await page.close().catch(() => {});
       }
