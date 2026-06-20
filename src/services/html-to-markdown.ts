@@ -9,6 +9,7 @@ const turndown = new TurndownService({
 });
 
 const MIN_EXTRACTION_RATIO = 0.15;
+const MIN_ARTICLE_CHARS = 1500;
 
 export function htmlToMarkdown(html: string): string | null {
   try {
@@ -18,7 +19,14 @@ export function htmlToMarkdown(html: string): string | null {
     const article = reader.parse();
     if (!article?.content) return null;
     const articleTextLen = article.textContent?.trim().length ?? 0;
-    if (bodyTextLen > 1000 && articleTextLen < bodyTextLen * MIN_EXTRACTION_RATIO) {
+    // Treat as under-extraction only when the result is both a tiny fragment
+    // and a tiny slice of the page — a small slice alone is normal for a short
+    // article on a nav-heavy site, where Readability is working correctly.
+    if (
+      bodyTextLen > 1000 &&
+      articleTextLen < MIN_ARTICLE_CHARS &&
+      articleTextLen < bodyTextLen * MIN_EXTRACTION_RATIO
+    ) {
       return null;
     }
     return turndown.turndown(article.content);

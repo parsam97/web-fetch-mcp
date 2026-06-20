@@ -35,6 +35,26 @@ const SALESFORCE_LIKE_HTML = `
 </body></html>
 `;
 
+const bigNav = Array.from(
+  { length: 400 },
+  (_, i) =>
+    `<li><a href="/page-${i}">Navigation link number ${i} pointing to a documentation topic</a></li>`
+).join("");
+
+// Short but complete article buried under a very large navigation menu —
+// the article is a tiny slice of total page text, but Readability extracted
+// it correctly and it should NOT be discarded as under-extraction.
+const NAV_HEAVY_SHORT_ARTICLE_HTML = `
+<html><body>
+  <nav role="navigation"><ul>${bigNav}</ul></nav>
+  <article>
+    <h1>Permission Set Licenses</h1>
+    <p>${"Permission set licenses entitle users to access additional features not included in their assigned user license. ".repeat(20)}</p>
+    <p>${"Users can be assigned any number of permission set licenses to expand their access. ".repeat(20)}</p>
+  </article>
+</body></html>
+`;
+
 const MINIMAL_HTML = `<html><body><p>x</p></body></html>`;
 
 const SCRIPT_STYLE_HTML = `
@@ -78,6 +98,13 @@ describe("htmlToMarkdown", () => {
   it("returns null for empty/unparseable HTML", () => {
     expect(htmlToMarkdown("")).toBeNull();
     expect(htmlToMarkdown("<html><body></body></html>")).toBeNull();
+  });
+
+  it("keeps a short but complete article on a nav-heavy page", () => {
+    const result = htmlToMarkdown(NAV_HEAVY_SHORT_ARTICLE_HTML);
+    expect(result).not.toBeNull();
+    expect(result).toContain("Permission Set Licenses");
+    expect(result).not.toContain("Navigation link number");
   });
 });
 
