@@ -32,7 +32,7 @@ async function track<T>(fn: () => Promise<T>): Promise<T> {
 
 const server = new McpServer({
   name: "web-fetch-mcp",
-  version: "0.1.0",
+  version: "0.2.0",
 });
 
 server.registerTool(
