@@ -163,6 +163,10 @@ Behavior:
 
 Running via Docker? The module must exist inside the container — mount it (`-v /host/plugins:/plugins -e FETCH_PLUGINS=/plugins/my-plugin.js`).
 
+### Example plugin
+
+[web-fetch-mcp-salesforce-atlas-addon](https://github.com/parsam97/web-fetch-mcp-salesforce-atlas-addon) is a worked example. It teaches the fetcher to read Salesforce Atlas documentation — pages that render client-side behind a consent shell — by calling Salesforce's own docs JSON API instead of a browser. Host-specific logic, kept in its own repo rather than in core.
+
 ## Development
 
 ```bash
