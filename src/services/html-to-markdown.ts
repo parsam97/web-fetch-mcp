@@ -15,7 +15,7 @@ export function htmlToMarkdown(html: string): string | null {
   try {
     const { document } = parseHTML(html);
     const bodyTextLen = document.body?.textContent?.trim().length ?? 0;
-    const reader = new Readability(document, { charThreshold: 100 });
+    const reader = new Readability(document);
     const article = reader.parse();
     if (!article?.content) return null;
     const articleTextLen = article.textContent?.trim().length ?? 0;

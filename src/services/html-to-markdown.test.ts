@@ -55,6 +55,23 @@ const NAV_HEAVY_SHORT_ARTICLE_HTML = `
 </body></html>
 `;
 
+// "community" class matches Readability's unlikely-candidates regex; a low charThreshold accepts the banners and skips the retry that recovers the article
+const BANNERED_COMMUNITY_HTML = `
+<html><body>
+  <div class="announcements">
+    <p>Upcoming Mandatory Changes to Public Key Infrastructure (PKI). Read More.</p>
+    <p>New Security Requirements Enforced in Summer 2026. Read More.</p>
+  </div>
+  <div class="cb-section forceCommunitySection">
+    <div class="ui-widget">
+      <h1>Standard User Licenses</h1>
+      <p>${"Seat-based license, designed for users who need access to custom apps but not to standard CRM functionality. ".repeat(5)}</p>
+      <p>${"Users with this license can access core platform functionality, such as accounts, contacts, reports, dashboards, documents, and custom tabs. ".repeat(5)}</p>
+    </div>
+  </div>
+</body></html>
+`;
+
 const MINIMAL_HTML = `<html><body><p>x</p></body></html>`;
 
 const SCRIPT_STYLE_HTML = `
@@ -98,6 +115,15 @@ describe("htmlToMarkdown", () => {
   it("returns null for empty/unparseable HTML", () => {
     expect(htmlToMarkdown("")).toBeNull();
     expect(htmlToMarkdown("<html><body></body></html>")).toBeNull();
+  });
+
+  it("recovers an article inside an unlikely-candidate wrapper despite short banners", () => {
+    const result = htmlToMarkdown(BANNERED_COMMUNITY_HTML);
+    expect(result).not.toBeNull();
+    expect(result).toContain("Standard User Licenses");
+    expect(result).toContain("core platform functionality");
+    expect(result).not.toContain("Public Key Infrastructure");
+    expect(result!.length).toBeGreaterThan(500);
   });
 
   it("keeps a short but complete article on a nav-heavy page", () => {

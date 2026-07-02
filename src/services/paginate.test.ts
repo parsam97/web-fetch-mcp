@@ -91,6 +91,41 @@ describe("paginateContent", () => {
     ).not.toContain(note);
   });
 
+  it("puts a loud partial-content banner before the content when truncated", () => {
+    const result = paginateContent(LONG_CONTENT, 0, 100);
+    const bannerIdx = result.text.indexOf("⚠️ PARTIAL CONTENT");
+    expect(bannerIdx).toBeGreaterThanOrEqual(0);
+    expect(bannerIdx).toBeLessThan(result.text.indexOf("aaaa"));
+    expect(result.text).toContain("showing 0–100 of 10000 chars (1%)");
+    expect(result.text).toContain("start_index=100");
+  });
+
+  it("appends a machine-readable JSON footer when paginated", () => {
+    const result = paginateContent(LONG_CONTENT, 0, 100);
+    const footer = JSON.parse(result.text.slice(result.text.lastIndexOf("\n") + 1));
+    expect(footer).toEqual({
+      has_more: true,
+      next_start_index: 100,
+      total_chars: 10000,
+      start_index: 0,
+      end_index: 100,
+      pct_shown: 1,
+    });
+  });
+
+  it("footer reports has_more=false with null next_start_index on the last page", () => {
+    const result = paginateContent(LONG_CONTENT, 9900, 5000);
+    const footer = JSON.parse(result.text.slice(result.text.lastIndexOf("\n") + 1));
+    expect(footer.has_more).toBe(false);
+    expect(footer.next_start_index).toBeNull();
+    expect(result.text).not.toContain("⚠️ PARTIAL CONTENT");
+  });
+
+  it("omits banner and footer for a complete single-page result", () => {
+    const result = paginateContent("short text", 0, 5000);
+    expect(result.text).toBe("short text");
+  });
+
   it("omits extraction and window for a single-page jina fetch", () => {
     const result = paginateContent("short text", 0, 5000, { strategy: "jina" });
     expect(result.text).toContain("[fetch: jina · 10 chars total]");

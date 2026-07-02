@@ -47,26 +47,47 @@ export function paginateContent(
 
   if (meta) {
     parts.push(fetchHeader(meta, content.length, startIndex, endIndex, paginated));
-    if (meta.extraction === "full-dom" && paginated) {
-      parts.push(
-        "*Note: this is the raw page DOM, so navigation and boilerplate may " +
-          "precede the main article — the content you want can appear further " +
-          "down. Paginate to reach it.*"
-      );
-    }
   } else if (startIndex > 0) {
     parts.push(
       `*Showing from character ${startIndex} of ${content.length} total.*`
     );
   }
 
+  const pct = content.length
+    ? Math.round((slice.length / content.length) * 100)
+    : 100;
+
   if (hasMore) {
     parts.push(
-      `*Content truncated. Use start_index=${endIndex} to continue.*`
+      `⚠️ PARTIAL CONTENT: showing ${startIndex}–${endIndex} of ${content.length} chars (${pct}%). ` +
+        `Do NOT draw conclusions about content you have not seen yet — ` +
+        `call again with start_index=${endIndex} to continue.`
+    );
+  }
+
+  if (meta?.extraction === "full-dom" && paginated) {
+    parts.push(
+      "*Note: this is the raw page DOM, so navigation and boilerplate may " +
+        "precede the main article — the content you want can appear further " +
+        "down. Missing content here means pagination is incomplete, not that " +
+        "the page is JS-gated. Paginate to reach it.*"
     );
   }
 
   parts.push(slice);
+
+  if (paginated) {
+    parts.push(
+      JSON.stringify({
+        has_more: hasMore,
+        next_start_index: hasMore ? endIndex : null,
+        total_chars: content.length,
+        start_index: startIndex,
+        end_index: endIndex,
+        pct_shown: pct,
+      })
+    );
+  }
 
   return { text: parts.join("\n"), hasMore };
 }

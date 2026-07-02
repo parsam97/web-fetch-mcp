@@ -32,7 +32,7 @@ async function track<T>(fn: () => Promise<T>): Promise<T> {
 
 const server = new McpServer({
   name: "web-fetch-mcp",
-  version: "0.2.0",
+  version: "0.2.1",
 });
 
 server.registerTool(
@@ -51,7 +51,7 @@ Args:
   - max_length (number): Maximum characters to return per call (default: ${DEFAULT_MAX_LENGTH}). Adjust based on how much content you need.
 
 Returns:
-  Page content as text, plus metadata about total length and whether more content is available.`,
+  Page content as text. Paginated responses include a ⚠️ PARTIAL CONTENT banner and end with a JSON footer ({"has_more": ..., "next_start_index": ...}). Never conclude a page is empty, JS-gated, or missing content until has_more is false — paginate to the end first.`,
     inputSchema: {
       url: z
         .string()
@@ -122,7 +122,9 @@ Args:
   - urls: Array of objects, each with:
     - url (string): Full URL of the page to fetch
     - start_index (number): Character offset (default: 0)
-    - max_length (number): Max characters to return (default: ${DEFAULT_MAX_LENGTH})`,
+    - max_length (number): Max characters to return (default: ${DEFAULT_MAX_LENGTH})
+
+Each paginated result includes a ⚠️ PARTIAL CONTENT banner and a JSON footer ({"has_more": ..., "next_start_index": ...}). Never conclude a page is empty, JS-gated, or missing content until has_more is false.`,
     inputSchema: {
       urls: z
         .array(
