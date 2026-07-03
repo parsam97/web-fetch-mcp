@@ -75,10 +75,29 @@ export async function fetchViaPuppeteer(url: string): Promise<PuppeteerResult> {
           )
           .catch(() => {});
 
-        // Strip script/style/noscript in-page to keep Readability fast and
-        // avoid OOM on multi-MB Aura/SPA pages, then hand the whole document
-        // to Readability so it can find the article on its own.
+        // Flatten shadow roots into the light DOM, then strip
+        // script/style/noscript, so Readability sees content that web
+        // components render inside shadow DOM (invisible to it otherwise).
         const rawHtml = await page.evaluate(() => {
+          const hosts: Element[] = [];
+          const roots: (Document | ShadowRoot)[] = [document];
+          while (roots.length) {
+            const root = roots.pop()!;
+            for (const el of root.querySelectorAll("*")) {
+              if (el.shadowRoot) {
+                hosts.push(el);
+                roots.push(el.shadowRoot);
+              }
+            }
+          }
+          // Reverse order inlines nested shadow roots before their ancestors.
+          for (let i = hosts.length - 1; i >= 0; i--) {
+            const host = hosts[i];
+            const frag = document.createElement("div");
+            frag.innerHTML = host.shadowRoot!.innerHTML;
+            for (const slot of frag.querySelectorAll("slot")) slot.remove();
+            host.append(...frag.childNodes);
+          }
           for (const el of document.querySelectorAll("script, style, noscript")) {
             el.remove();
           }
